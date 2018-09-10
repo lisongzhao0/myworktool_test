@@ -12,6 +12,8 @@ repositories {
 }
 
 dependencies {
+    compile group: 'com.belerweb', name: 'pinyin4j', version: '2.5.0'
+    compile 'com.h2database:h2:1.4.196'
     compile 'com.h2database:h2:1.4.196'
     compile group: 'org.postgresql', name: 'postgresql', version: '42.1.4'
     compile 'org.apache.poi:poi:3.15'

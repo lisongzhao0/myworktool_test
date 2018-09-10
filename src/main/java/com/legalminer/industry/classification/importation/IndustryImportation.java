@@ -1,42 +1,49 @@
 package com.legalminer.industry.classification.importation;
 
-import com.legalminer.industry.classification.importation.demain.Classification;
+import com.legalminer.industry.classification.importation.demain.ClassiNode;
+import com.legalminer.industry.classification.importation.demain.ClassificationExcel;
 import com.legalminer.industry.classification.importation.demain.Company;
-import com.legalminer.tools.PostgreSQLTool;
+import com.legalminer.tools.PinyinTool;
+import com.sun.javafx.binding.StringFormatter;
+import net.sourceforge.pinyin4j.PinyinHelper;
+import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFCell;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.sql.Connection;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class IndustryImportation {
 
-    private static final int DATA_MIN_ROW = 1;
-    private static final int DATA_MAX_ROW = 101;
+    public static void main(String[] args) throws IOException, InvalidFormatException, BadHanyuPinyinOutputFormatCombination {
+        Level1Start.clear();
+        classifRoot.removeAllChildren();
 
-
-    public static void main(String[] args) {
-
+        new IndustryImportation().readExcel(excelFilePath);
     }
 
+    private static final Set<String> Level1Start = new HashSet<>();
+    private static final String ClassiType = "shenwan";
+    private static final String DataColor = "FFCCFFFF";
+    private static final String excelFilePath = "D:\\work\\资料\\BRM1.0（理脉行业）行业分类（申万版）_wyz_count_1532595981851.xlsx";
 
-    public String readExcel(String filePath) throws IOException, InvalidFormatException {
+    private static ClassiNode classifRoot = new ClassiNode();
+
+
+    public String readExcel(String filePath) throws IOException, InvalidFormatException, BadHanyuPinyinOutputFormatCombination {
         Workbook wb = getWorkbook(filePath);
         if (wb==null) { return null; }
 
         int sheetSize = wb.getNumberOfSheets();
-        List<Classification> allClazz = new ArrayList<>();
+        List<ClassificationExcel> allClazz = new ArrayList<>();
         List<Company> allComp = new ArrayList<>();
 
         for (int i=0; i<sheetSize; i++) {
@@ -45,6 +52,9 @@ public class IndustryImportation {
             allComp.addAll(readCompanySheet(sheet));
         }
 
+        String[] sqls = constructSQL(allClazz, allComp);
+
+        return null;
 
     }
 
@@ -62,7 +72,7 @@ public class IndustryImportation {
         }
     }
 
-    public List<Classification> readClassificationSheet(Sheet sheet) {
+    public List<ClassificationExcel> readClassificationSheet(Sheet sheet) {
         if (null==sheet) { return new ArrayList<>(); }
 
         String sheetName = sheet.getSheetName().trim();
@@ -70,7 +80,7 @@ public class IndustryImportation {
             return new ArrayList<>();
         }
 
-        List<Classification> allClazz = new ArrayList<>();
+        List<ClassificationExcel> allClazz = new ArrayList<>();
         int lastRowIndex = sheet.getLastRowNum();
         for(int rIndex = 1; rIndex <= lastRowIndex; rIndex++) {   //遍历行
             Row row = sheet.getRow(rIndex);
@@ -78,7 +88,7 @@ public class IndustryImportation {
 
             int firstCellIndex = row.getFirstCellNum();
             int lastCellIndex = row.getLastCellNum();
-            Classification clazz = new Classification();
+            ClassificationExcel clazz = new ClassificationExcel();
             for (int cIndex = firstCellIndex; cIndex < lastCellIndex; cIndex++) {   //遍历列
                 Cell cell = row.getCell(cIndex);
                 clazz.setMarket(sheetName);
@@ -104,9 +114,12 @@ public class IndustryImportation {
                     case 6:
                         clazz.setLevel04(cell.toString());
                         continue;
+                    default:
+                        continue;
 
                 }
             }
+            allClazz.add(clazz);
         }
 
         return allClazz;
@@ -121,72 +134,172 @@ public class IndustryImportation {
         }
 
         List<Company> allComp = new ArrayList<>();
-        for(int rIndex = DATA_MIN_ROW; rIndex <= DATA_MAX_ROW; rIndex++) {   //遍历行
+        int lastRowIndex = sheet.getLastRowNum();
+        for(int rIndex = 1; rIndex <= lastRowIndex; rIndex++) {   //遍历行
             Row row = sheet.getRow(rIndex);
             if (row==null) { continue; }
+            Cell colorCell = row.getCell(0);
+            if (null==((XSSFCell)colorCell).getCellStyle()
+             || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor()
+             || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex()
+             || !DataColor.equals(((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex())) {
+                continue;
+            }
+
 
             int firstCellIndex = row.getFirstCellNum();
             int lastCellIndex = row.getLastCellNum();
-            Company clazz = new Company();
+            Company comp = new Company();
             for (int cIndex = firstCellIndex; cIndex < lastCellIndex; cIndex++) {   //遍历列
                 Cell cell = row.getCell(cIndex);
-                clazz.setSheetName(sheetName);
+                comp.setSheetName(sheetName);
                 switch (cIndex-firstCellIndex) {
                     case 0:
-                        clazz.setFullName(cell.toString());
+                        comp.setFullName(cell.toString());
                         continue;
                     case 1:
-                        clazz.setCaseSize(cell.toString());
+                        comp.setCaseSize(cell.toString());
                         continue;
                     case 2:
-                        clazz.setTurnover(cell.toString());
+                        comp.setTurnover(cell.toString());
+                        continue;
+                    default:
                         continue;
                 }
             }
+            allComp.add(comp);
         }
 
         return allComp;
     }
 
-    public String[] constructSQL(List<Classification> allClazz, List<Company> allComp) {
-        String sqlClassif = constructClassifSQL(allClazz, allComp);
-        String sqlCompany = constructCompSQL(allClazz, allComp);
-        String sqlClassifCompRel = constructClassifCompRelSQL(allClazz, allComp);
+    public String[] constructSQL(List<ClassificationExcel> allClazz, List<Company> allComp) throws BadHanyuPinyinOutputFormatCombination {
+        List<ClassificationExcel> validClassif = getValidClassif(allClazz, allComp);
+        Set<String> existed = new HashSet<>();
+        for (ClassificationExcel clazz : validClassif) {
+            if (existed.contains(clazz.level1234())) { continue; }
+            existed.add(clazz.level1234());
+        }
 
-        return new String[]{ sqlClassif, sqlCompany, sqlClassifCompRel };
+        classifRoot = ClassiNode.createTree(classifRoot, new ArrayList<>(existed));
+        setUuidForClassiNode(classifRoot);
+
+        return new String[]{  };
     }
 
-
-    public String constructClassifSQL(List<Classification> allClazz, List<Company> allComp) {
+    public List<ClassificationExcel> getValidClassif(List<ClassificationExcel> allClazz, List<Company> allComp) {
         Set<String> allCompanyFullName = new HashSet<>();
         for (Company comp : allComp) {
             allCompanyFullName.add(comp.getFullName());
         }
 
-        List<Classification> existClassifi = new ArrayList<>();
-        for (Classification clazz : allClazz) {
+        List<ClassificationExcel> existClassifi = new ArrayList<>();
+        for (ClassificationExcel clazz : allClazz) {
             if (!allCompanyFullName.contains(clazz.getFullName())) {
                 continue;
             }
 
             existClassifi.add(clazz);
+            clazz.setUuid(UUID.randomUUID().toString().replace("-", ""));
         }
 
+        Collections.sort(existClassifi, new Comparator<ClassificationExcel>() {
+            @Override
+            public int compare(ClassificationExcel o1, ClassificationExcel o2) {
+                if (o1==null && o2==null) { return 0; }
+                else if (o1!=null && o2==null) { return 1;}
+                else if (o1==null && o2!=null) { return -1; }
+                else {
+                    if (!o1.getLevel01().equals(o2.getLevel01())) {
+                        return o1.getLevel01().compareTo(o2.getLevel01());
+                    }
+                    else if (!o1.getLevel02().equals(o2.getLevel02())) {
+                        return o1.getLevel02().compareTo(o2.getLevel02());
+                    }
+                    else if (!o1.getLevel03().equals(o2.getLevel03())) {
+                        return o1.getLevel03().compareTo(o2.getLevel03());
+                    }
+                    else if (null!=o1.getLevel04() && !o1.getLevel04().equals(o2.getLevel04())) {
+                        return o1.getLevel04().compareTo(o2.getLevel04());
+                    }
+                }
+                return 0;
+            }
+        });
 
+        return existClassifi;
     }
 
-    public String constructCompSQL(List<Classification> allClazz, List<Company> allComp) {
-        //jdbc:postgresql://192.168.1.129:5432/legalminer
-        //usr:  postgres
-        //pwd:  legallohas
+    public ClassiNode setUuidForClassiNode(ClassiNode node) throws BadHanyuPinyinOutputFormatCombination {
+        List<ClassiNode> allLeaf = ClassiNode.getAllLeaf(node);
+        PinyinTool pinyinTool = PinyinTool.newInstance();
+
+        // 设置 level 01 的 uuid
+        Enumeration<ClassiNode> allLevel01 = node.children();
+        while (allLevel01.hasMoreElements()) {
+            ClassiNode level01 = allLevel01.nextElement();
+            String level01Uuid = pinyinTool.toPinYin(level01.getLevel(), "", true);
+            if (Level1Start.contains(level01Uuid)) {
+                throw new RuntimeException("Level01 uuid is exist, uuid="+level01Uuid);
+            }
+            Level1Start.add(level01Uuid);
+            level01.setUuid(level01Uuid);
+        }
+
+        // 设置 level 04 03 02 的 uuid
+        for (ClassiNode leaf : allLeaf) {
+            StringBuilder uuidBuf = new StringBuilder();
+            ClassiNode next = leaf;
+            while(null!=next.getParent()) {
+                if (null!=next.getUuid()) {
+                    uuidBuf.insert(0, next.getUuid() + " ");
+                    break;
+                }
+                else
+                    uuidBuf.insert(0, String.format("%02d ", next.getParent().getIndex(next) + 1));
+                next = next.getParent();
+            }
+            String uuid = uuidBuf.toString().replace(" ", "");
+            next = leaf;
+            while(null!=next.getParent()) {
+                if (null!=next.getUuid()) {
+                    break;
+                }
+                else {
+                    next.setUuid(uuid);
+                    uuid = uuid.substring(0, uuid.length()-2);
+                }
+                next = next.getParent();
+            }
+
+            System.out.println(leaf.getUuid() +" --- " + leaf.getLevel1234());
+        }
+
+        System.out.println("leaf size : " + allLeaf.size());
+        return node;
+    }
+
+    public String constructClassifSQL(List<ClassificationExcel> allClazz) {
         StringBuilder sqlComp = new StringBuilder();
-        for (Company comp : allComp) {
-            sqlComp.append("in")
+        for (ClassificationExcel clazz : allClazz) {
+
+            sqlComp.append("insert into ");
         }
+        return null;
     }
 
-    public String constructClassifCompRelSQL(List<Classification> allClazz, List<Company> allComp) {
+//    public String constructCompSQL(List<ClassificationExcel> allClazz, List<Company> allComp) {
+//        //jdbc:postgresql://192.168.1.129:5432/legalminer
+//        //usr:  postgres
+//        //pwd:  legallohas
+//        StringBuilder sqlComp = new StringBuilder();
+//        for (Company comp : allComp) {
+//            sqlComp.append("in")
+//        }
+//    }
 
-    }
+//    public String constructClassifCompRelSQL(List<ClassificationExcel> allClazz, List<Company> allComp) {
+//
+//    }
 
 }

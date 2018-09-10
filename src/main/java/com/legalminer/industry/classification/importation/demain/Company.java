@@ -5,6 +5,7 @@ public class Company {
     private String fullName;
     private String caseSize;
     private String turnover;
+    private String uuid;
 
     public String getSheetName() {
         return sheetName;
@@ -20,6 +21,10 @@ public class Company {
 
     public String getTurnover() {
         return turnover;
+    }
+
+    public String getUuid() {
+        return uuid;
     }
 
     public Company setSheetName(String sheetName) {
@@ -39,6 +44,11 @@ public class Company {
 
     public Company setTurnover(String turnover) {
         this.turnover = turnover;
+        return this;
+    }
+
+    public Company setUuid(String uuid) {
+        this.uuid = uuid;
         return this;
     }
 }

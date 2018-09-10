@@ -1,6 +1,6 @@
 package com.legalminer.industry.classification.importation.demain;
 
-public class Classification {
+public class ClassificationExcel {
     private String market;
     private String code;
     private String shortName;
@@ -9,6 +9,7 @@ public class Classification {
     private String level02;
     private String level03;
     private String level04;
+    private String uuid;
 
     public String getMarket() {
         return market;
@@ -42,43 +43,61 @@ public class Classification {
         return level04;
     }
 
-    public Classification setMarket(String market) {
+    public String getUuid() {
+        return uuid;
+    }
+
+    public String level1234() {
+        return level01 + " | " + level02 + " | " + level03 +
+                (null!=level04 ? " | " + level04 : "");
+    }
+
+    public String toString() {
+        return level1234();
+    }
+
+    public ClassificationExcel setMarket(String market) {
         this.market = market;
         return this;
     }
 
-    public Classification setCode(String code) {
+    public ClassificationExcel setCode(String code) {
         this.code = code;
         return this;
     }
 
-    public Classification setShortName(String shortName) {
+    public ClassificationExcel setShortName(String shortName) {
         this.shortName = shortName;
         return this;
     }
 
-    public Classification setFullName(String fullName) {
+    public ClassificationExcel setFullName(String fullName) {
         this.fullName = fullName;
         return this;
     }
 
-    public Classification setLevel01(String level01) {
+    public ClassificationExcel setLevel01(String level01) {
         this.level01 = level01;
         return this;
     }
 
-    public Classification setLevel02(String level02) {
+    public ClassificationExcel setLevel02(String level02) {
         this.level02 = level02;
         return this;
     }
 
-    public Classification setLevel03(String level03) {
+    public ClassificationExcel setLevel03(String level03) {
         this.level03 = level03;
         return this;
     }
 
-    public Classification setLevel04(String level04) {
+    public ClassificationExcel setLevel04(String level04) {
         this.level04 = level04;
+        return this;
+    }
+
+    public ClassificationExcel setUuid(String uuid) {
+        this.uuid = uuid;
         return this;
     }
 }
