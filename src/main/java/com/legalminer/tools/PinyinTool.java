@@ -19,8 +19,8 @@ public class PinyinTool {
         FIRSTUPPER              //首字母大写
     }
 
-    public static final PinyinTool newInstance() { return new PinyinTool(); }
-    public static final PinyinTool newInstance(HanyuPinyinOutputFormat format) {
+    public static final PinyinTool newOne() { return new PinyinTool(); }
+    public static final PinyinTool newOne(HanyuPinyinOutputFormat format) {
         PinyinTool newOne = new PinyinTool();
         newOne.format = format;
         return newOne;

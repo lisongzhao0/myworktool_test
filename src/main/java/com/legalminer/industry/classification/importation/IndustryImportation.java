@@ -3,21 +3,17 @@ package com.legalminer.industry.classification.importation;
 import com.legalminer.industry.classification.importation.demain.ClassiNode;
 import com.legalminer.industry.classification.importation.demain.ClassificationExcel;
 import com.legalminer.industry.classification.importation.demain.Company;
+import com.legalminer.tools.OfficeTool;
 import com.legalminer.tools.PinyinTool;
-import com.sun.javafx.binding.StringFormatter;
-import net.sourceforge.pinyin4j.PinyinHelper;
+import com.legalminer.tools.TreeTool;
 import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCell;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 
@@ -31,15 +27,16 @@ public class IndustryImportation {
     }
 
     private static final Set<String> Level1Start = new HashSet<>();
-    private static final String ClassiType = "shenwan";
+    private static final String ClassiType = "gics";
     private static final String DataColor = "FFCCFFFF";
-    private static final String excelFilePath = "D:\\work\\资料\\BRM1.0（理脉行业）行业分类（申万版）_wyz_count_1532595981851.xlsx";
+    private static final String excelFilePath = "D:\\work\\资料\\BRM1.0（理脉行业）行业分类（GICS版）_wyz_count_1532595979862.xlsx";
 
     private static ClassiNode classifRoot = new ClassiNode();
+    private static OfficeTool officeTool  = OfficeTool.newOne();
 
 
     public String readExcel(String filePath) throws IOException, InvalidFormatException, BadHanyuPinyinOutputFormatCombination {
-        Workbook wb = getWorkbook(filePath);
+        Workbook wb = officeTool.getWorkbook(filePath);
         if (wb==null) { return null; }
 
         int sheetSize = wb.getNumberOfSheets();
@@ -58,118 +55,17 @@ public class IndustryImportation {
 
     }
 
-
-    public Workbook getWorkbook(String excelFilePath) throws IOException, InvalidFormatException {
-        File excel = new File(excelFilePath);
-        if (excelFilePath.endsWith(".xls")){
-            FileInputStream fis = new FileInputStream(excel);
-            return new HSSFWorkbook(fis);
-        }else if (excelFilePath.endsWith(".xlsx")){
-            return  new XSSFWorkbook(excel);
-        }else {
-            System.out.println("文件类型错误!");
-            return null;
-        }
-    }
-
     public List<ClassificationExcel> readClassificationSheet(Sheet sheet) {
         if (null==sheet) { return new ArrayList<>(); }
-
-        String sheetName = sheet.getSheetName().trim();
-        if (!"A股".equals(sheetName) && !"新三板".equals(sheetName)) {
-            return new ArrayList<>();
-        }
-
         List<ClassificationExcel> allClazz = new ArrayList<>();
-        int lastRowIndex = sheet.getLastRowNum();
-        for(int rIndex = 1; rIndex <= lastRowIndex; rIndex++) {   //遍历行
-            Row row = sheet.getRow(rIndex);
-            if (row == null) { continue; }
-
-            int firstCellIndex = row.getFirstCellNum();
-            int lastCellIndex = row.getLastCellNum();
-            ClassificationExcel clazz = new ClassificationExcel();
-            for (int cIndex = firstCellIndex; cIndex < lastCellIndex; cIndex++) {   //遍历列
-                Cell cell = row.getCell(cIndex);
-                clazz.setMarket(sheetName);
-                switch (cIndex-firstCellIndex) {
-                    case 0:
-                        clazz.setCode(cell.toString());
-                        continue;
-                    case 1:
-                        clazz.setShortName(cell.toString());
-                        continue;
-                    case 2:
-                        clazz.setFullName(cell.toString());
-                        continue;
-                    case 3:
-                        clazz.setLevel01(cell.toString());
-                        continue;
-                    case 4:
-                        clazz.setLevel02(cell.toString());
-                        continue;
-                    case 5:
-                        clazz.setLevel03(cell.toString());
-                        continue;
-                    case 6:
-                        clazz.setLevel04(cell.toString());
-                        continue;
-                    default:
-                        continue;
-
-                }
-            }
-            allClazz.add(clazz);
-        }
-
+        officeTool.readSheet(sheet, new ExcelHandler().setRowCache(allClazz).setClassification(true));
         return allClazz;
     }
 
     public List<Company> readCompanySheet(Sheet sheet) {
         if (null==sheet) { return new ArrayList<>(); }
-
-        String sheetName = sheet.getSheetName().trim();
-        if ("A股".equals(sheetName) || "新三板".equals(sheetName)) {
-            return new ArrayList<>();
-        }
-
         List<Company> allComp = new ArrayList<>();
-        int lastRowIndex = sheet.getLastRowNum();
-        for(int rIndex = 1; rIndex <= lastRowIndex; rIndex++) {   //遍历行
-            Row row = sheet.getRow(rIndex);
-            if (row==null) { continue; }
-            Cell colorCell = row.getCell(0);
-            if (null==((XSSFCell)colorCell).getCellStyle()
-             || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor()
-             || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex()
-             || !DataColor.equals(((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex())) {
-                continue;
-            }
-
-
-            int firstCellIndex = row.getFirstCellNum();
-            int lastCellIndex = row.getLastCellNum();
-            Company comp = new Company();
-            for (int cIndex = firstCellIndex; cIndex < lastCellIndex; cIndex++) {   //遍历列
-                Cell cell = row.getCell(cIndex);
-                comp.setSheetName(sheetName);
-                switch (cIndex-firstCellIndex) {
-                    case 0:
-                        comp.setFullName(cell.toString());
-                        continue;
-                    case 1:
-                        comp.setCaseSize(cell.toString());
-                        continue;
-                    case 2:
-                        comp.setTurnover(cell.toString());
-                        continue;
-                    default:
-                        continue;
-                }
-            }
-            allComp.add(comp);
-        }
-
+        officeTool.readSheet(sheet, new ExcelHandler().setRowCache(allComp).setClassification(false));
         return allComp;
     }
 
@@ -182,7 +78,8 @@ public class IndustryImportation {
         }
 
         classifRoot = ClassiNode.createTree(classifRoot, new ArrayList<>(existed));
-        setUuidForClassiNode(classifRoot);
+        TreeTool treeTool = TreeTool.newOne();
+        treeTool.getProcessLeaf(classifRoot, new TreeHandler());
 
         return new String[]{  };
     }
@@ -232,7 +129,8 @@ public class IndustryImportation {
 
     public ClassiNode setUuidForClassiNode(ClassiNode node) throws BadHanyuPinyinOutputFormatCombination {
         List<ClassiNode> allLeaf = ClassiNode.getAllLeaf(node);
-        PinyinTool pinyinTool = PinyinTool.newInstance();
+        System.out.println(allLeaf.size());
+        PinyinTool pinyinTool = PinyinTool.newOne();
 
         // 设置 level 01 的 uuid
         Enumeration<ClassiNode> allLevel01 = node.children();
@@ -271,11 +169,8 @@ public class IndustryImportation {
                 }
                 next = next.getParent();
             }
-
-            System.out.println(leaf.getUuid() +" --- " + leaf.getLevel1234());
+            System.out.println(leaf.getUuid() + "\t" + leaf.getLevel1234());
         }
-
-        System.out.println("leaf size : " + allLeaf.size());
         return node;
     }
 
@@ -302,4 +197,171 @@ public class IndustryImportation {
 //
 //    }
 
+    public static class TreeHandler implements TreeTool.TreeHanlder {
+
+        private static final PinyinTool pinyinTool = PinyinTool.newOne();
+
+        @Override
+        public ClassiNode createNode(ClassiNode rootNode, String[] treePath) {
+            return null;
+        }
+
+        @Override
+        public void processLeaf(ClassiNode leaf) {
+            // 设置 level 04 03 02 01 的 uuid
+            StringBuilder uuidBuf = new StringBuilder();
+            ClassiNode next = leaf;
+            while(null!=next.getParent()) {
+                if (next.getParent().getParent()==null/* current is level01 */) {
+                    try {
+                        uuidBuf.insert(0, pinyinTool.toPinYin(next.getLevel(), "", true) + " ");
+                    } catch (BadHanyuPinyinOutputFormatCombination bhpofc) {
+                        new RuntimeException(bhpofc.getMessage(), bhpofc);
+                    }
+                    break;
+                }
+                else
+                    uuidBuf.insert(0, String.format("%02d ", next.getParent().getIndex(next) + 1));
+                next = next.getParent();
+            }
+            String uuid = uuidBuf.toString().replace(" ", "");
+            next = leaf;
+            while(null!=next.getParent()) {
+                if (next.getParent().getParent()==null/* current is level01 */) {
+                    next.setUuid(uuid);
+                    break;
+                }
+                else {
+                    next.setUuid(uuid);
+                    uuid = uuid.substring(0, uuid.length()-2);
+                }
+                next = next.getParent();
+            }
+            System.out.println(leaf.getUuid() + "\t" + leaf.getLevel1234());
+        }
+    }
+
+    public static class ExcelHandler implements OfficeTool.ExcelHandler {
+
+        protected boolean isClassification;
+        protected String  sheetName = null;
+        protected List    rowCache  = null;
+
+        public ExcelHandler(){}
+
+        public boolean isClassification() {
+            return isClassification;
+        }
+
+        public ExcelHandler setClassification(boolean isClassification) {
+            this.isClassification = isClassification;
+            return this;
+        }
+
+        @Override
+        public boolean sheetValid(Sheet sheet) {
+            sheetName = sheet.getSheetName().trim();
+            boolean valid = "A股".equals(sheetName) || "新三板".equals(sheetName);
+            return isClassification ? valid : !valid;
+        }
+
+        @Override
+        public boolean rowValid(Row row) {
+            if (isClassification) {
+                return row != null;
+            }
+            else {
+                if (row!=null) {
+                    Cell colorCell = row.getCell(0);
+                    if (null==((XSSFCell)colorCell).getCellStyle()
+                     || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor()
+                     || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex()
+                     || !DataColor.equals(((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex())) {
+                        return false;
+                    }
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public Object processRow(Row row) {
+            return isClassification ? processClassification(row) : processCompany(row);
+        }
+
+        @Override
+        public List getRowCache() {
+            return rowCache;
+        }
+
+        @Override
+        public ExcelHandler setRowCache(List rowCache) {
+            this.rowCache = rowCache;
+            return this;
+        }
+
+        private Object processCompany(Row row) {
+            int firstCellIndex = row.getFirstCellNum();
+            int lastCellIndex = row.getLastCellNum();
+            Company comp = new Company();
+            for (int cIndex = firstCellIndex; cIndex < lastCellIndex; cIndex++) {   //遍历列
+                Cell cell = row.getCell(cIndex);
+                comp.setSheetName(sheetName);
+                switch (cIndex-firstCellIndex) {
+                    case 0:
+                        comp.setFullName(cell.toString());
+                        continue;
+                    case 1:
+                        comp.setCaseSize(cell.toString());
+                        continue;
+                    case 2:
+                        comp.setTurnover(cell.toString());
+                        continue;
+                    default:
+                        continue;
+                }
+            }
+            getRowCache().add(comp);
+            return comp;
+        }
+
+        private Object processClassification(Row row) {
+            int firstCellIndex = row.getFirstCellNum();
+            int lastCellIndex = row.getLastCellNum();
+            ClassificationExcel clazz = new ClassificationExcel();
+            for (int cIndex = firstCellIndex; cIndex < lastCellIndex; cIndex++) {   //遍历列
+                Cell cell = row.getCell(cIndex);
+                clazz.setMarket(sheetName);
+                switch (cIndex-firstCellIndex) {
+                    case 0:
+                        clazz.setCode(cell.toString());
+                        continue;
+                    case 1:
+                        clazz.setShortName(cell.toString());
+                        continue;
+                    case 2:
+                        clazz.setFullName(cell.toString());
+                        continue;
+                    case 3:
+                        clazz.setLevel01(cell.toString());
+                        continue;
+                    case 4:
+                        clazz.setLevel02(cell.toString());
+                        continue;
+                    case 5:
+                        clazz.setLevel03(cell.toString());
+                        continue;
+                    case 6:
+                        clazz.setLevel04(cell.toString());
+                        continue;
+                    default:
+                        continue;
+
+                }
+            }
+            getRowCache().add(clazz);
+            return clazz;
+        }
+    }
 }
