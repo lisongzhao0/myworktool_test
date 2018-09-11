@@ -19,23 +19,24 @@ import java.util.*;
 
 public class IndustryImportation {
 
-    public static void main(String[] args) throws IOException, InvalidFormatException, BadHanyuPinyinOutputFormatCombination {
-        Level1Start.clear();
-        classifRoot.removeAllChildren();
-
-        new IndustryImportation().readExcel(excelFilePath);
+    public static void main(String[] args) throws IOException, InvalidFormatException {
+        String[] sqls = new IndustryImportation("gics", "FFCCFFFF")
+                .constructSQLByExcel(
+                        "D:\\work\\资料\\BRM1.0（理脉行业）行业分类（GICS版）_wyz_count_1532595979862.xlsx"
+                );
     }
 
-    private static final Set<String> Level1Start = new HashSet<>();
-    private static final String ClassiType = "gics";
-    private static final String DataColor = "FFCCFFFF";
-    private static final String excelFilePath = "D:\\work\\资料\\BRM1.0（理脉行业）行业分类（GICS版）_wyz_count_1532595979862.xlsx";
+    private String ClassiType = "unknown";
+    private String DataColor = "FFCCFFFF";
+    private ClassiNode classifRoot = new ClassiNode();
+    private OfficeTool officeTool  = OfficeTool.newOne();
 
-    private static ClassiNode classifRoot = new ClassiNode();
-    private static OfficeTool officeTool  = OfficeTool.newOne();
+    public IndustryImportation(String classiType, String dataColor) {
+        this.ClassiType = classiType;
+        this.DataColor  = dataColor;
+    }
 
-
-    public String readExcel(String filePath) throws IOException, InvalidFormatException, BadHanyuPinyinOutputFormatCombination {
+    public String[] constructSQLByExcel(String filePath) throws IOException, InvalidFormatException {
         Workbook wb = officeTool.getWorkbook(filePath);
         if (wb==null) { return null; }
 
@@ -50,26 +51,25 @@ public class IndustryImportation {
         }
 
         String[] sqls = constructSQL(allClazz, allComp);
-
-        return null;
+        return sqls;
 
     }
 
-    public List<ClassificationExcel> readClassificationSheet(Sheet sheet) {
+    private List<ClassificationExcel> readClassificationSheet(Sheet sheet) {
         if (null==sheet) { return new ArrayList<>(); }
         List<ClassificationExcel> allClazz = new ArrayList<>();
-        officeTool.readSheet(sheet, new ExcelHandler().setRowCache(allClazz).setClassification(true));
+        officeTool.readSheet(sheet, new ExcelHandler(DataColor).setRowCache(allClazz).setClassification(true));
         return allClazz;
     }
 
-    public List<Company> readCompanySheet(Sheet sheet) {
+    private List<Company> readCompanySheet(Sheet sheet) {
         if (null==sheet) { return new ArrayList<>(); }
         List<Company> allComp = new ArrayList<>();
-        officeTool.readSheet(sheet, new ExcelHandler().setRowCache(allComp).setClassification(false));
+        officeTool.readSheet(sheet, new ExcelHandler(DataColor).setRowCache(allComp).setClassification(false));
         return allComp;
     }
 
-    public String[] constructSQL(List<ClassificationExcel> allClazz, List<Company> allComp) throws BadHanyuPinyinOutputFormatCombination {
+    private String[] constructSQL(List<ClassificationExcel> allClazz, List<Company> allComp) {
         List<ClassificationExcel> validClassif = getValidClassif(allClazz, allComp);
         Set<String> existed = new HashSet<>();
         for (ClassificationExcel clazz : validClassif) {
@@ -147,13 +147,10 @@ public class IndustryImportation {
         classiCompanySQL.delete(classiCompanySQL.length()-2, classiCompanySQL.length()).append(";");
         classiCompanyRelSQL.delete(classiCompanyRelSQL.length()-2, classiCompanyRelSQL.length()).append(";");
 
-        System.out.println(classificationSQL.toString());
-        System.out.println(classiCompanySQL.toString());
-        System.out.println(classiCompanyRelSQL.toString());
         return new String[]{classificationSQL.toString(), classiCompanySQL.toString(), classiCompanyRelSQL.toString() };
     }
 
-    public List<ClassificationExcel> getValidClassif(List<ClassificationExcel> allClazz, List<Company> allComp) {
+    private List<ClassificationExcel> getValidClassif(List<ClassificationExcel> allClazz, List<Company> allComp) {
         HashMap<String, Company> allCompanyFullName = new HashMap<>();
         for (Company comp : allComp) {
             allCompanyFullName.put(comp.getFullName(), comp);
@@ -197,7 +194,7 @@ public class IndustryImportation {
         return existClassifi;
     }
 
-    public static class TreeHandler implements TreeTool.TreeHanlder {
+    protected static class TreeHandler implements TreeTool.TreeHanlder {
 
         private static final PinyinTool pinyinTool = PinyinTool.newOne();
 
@@ -242,17 +239,19 @@ public class IndustryImportation {
                 }
                 next = next.getParent();
             }
-            System.out.println(leaf.getUuid() + "\t" + leaf.getLevel1234());
         }
     }
 
-    public static class ExcelHandler implements OfficeTool.ExcelHandler {
+    protected static class ExcelHandler implements OfficeTool.ExcelHandler {
 
         protected boolean isClassification;
         protected String  sheetName = null;
         protected List    rowCache  = null;
+        protected String  dataColor = null;
 
-        public ExcelHandler(){}
+        public ExcelHandler(String dataColor){
+            this.dataColor = dataColor;
+        }
 
         public boolean isClassification() {
             return isClassification;
@@ -281,7 +280,8 @@ public class IndustryImportation {
                     if (null==((XSSFCell)colorCell).getCellStyle()
                      || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor()
                      || null==((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex()
-                     || !DataColor.equals(((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex())) {
+                     || null==dataColor
+                     || !dataColor.equals(((XSSFCell)colorCell).getCellStyle().getFillForegroundXSSFColor().getARGBHex())) {
                         return false;
                     }
                     return true;

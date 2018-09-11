@@ -1,6 +1,7 @@
 package com.legalminer.industry.classification.importation;
 
 import com.legalminer.industry.classification.importation.demain.ClassiNode;
+import com.legalminer.tools.TreeTool;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -19,15 +20,16 @@ public class ClassiNodeTest {
         treePath.add("工业 | 资本品 | 机械制造 | 建筑机械与重型卡车");
         treePath.add("医疗保健 | 医疗保健设备与服务 | 医疗保健设备与用品 | 医疗保健用品");
 
-        ClassiNode rootNode = ClassiNode.createTree(null, treePath);
-        List<ClassiNode> allLeaf = ClassiNode.getAllLeaf(rootNode);
+        TreeTool treeTool = TreeTool.newOne();
+        ClassiNode rootNode = treeTool.createTree(null, treePath);
+        List<ClassiNode> allLeaf = treeTool.getAllLeaf(rootNode);
 
         Assert.assertEquals(treePath.size(), allLeaf.size());
         for (ClassiNode leaf : allLeaf) {
             Assert.assertTrue(treePath.contains(leaf.getLevel1234()));
         }
         for (String tp : treePath) {
-            Assert.assertNotNull(ClassiNode.getNode(rootNode, tp));
+            Assert.assertNotNull(treeTool.getNode(rootNode, tp));
         }
     }
 }
