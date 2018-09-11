@@ -22,8 +22,9 @@ public class IndustryImportation {
     public static void main(String[] args) throws IOException, InvalidFormatException {
         String[] sqls = new IndustryImportation("gics", "FFCCFFFF")
                 .constructSQLByExcel(
-                        "D:\\work\\资料\\BRM1.0（理脉行业）行业分类（GICS版）_wyz_count_1532595979862.xlsx"
+                        "D:\\work\\资料\\BRM1.0（理脉行业）行业分类（证监会版）_wyz_count_1532595983324.xlsx"
                 );
+        System.out.println(Arrays.asList(sqls));
     }
 
     private String ClassiType = "unknown";
@@ -177,10 +178,10 @@ public class IndustryImportation {
                     if (!o1.getLevel01().equals(o2.getLevel01())) {
                         return o1.getLevel01().compareTo(o2.getLevel01());
                     }
-                    else if (!o1.getLevel02().equals(o2.getLevel02())) {
+                    else if (null!=o1.getLevel02() && !o1.getLevel02().equals(o2.getLevel02())) {
                         return o1.getLevel02().compareTo(o2.getLevel02());
                     }
-                    else if (!o1.getLevel03().equals(o2.getLevel03())) {
+                    else if (null!=o1.getLevel03() && !o1.getLevel03().equals(o2.getLevel03())) {
                         return o1.getLevel03().compareTo(o2.getLevel03());
                     }
                     else if (null!=o1.getLevel04() && !o1.getLevel04().equals(o2.getLevel04())) {
@@ -216,7 +217,7 @@ public class IndustryImportation {
             while(null!=next.getParent()) {
                 if (next.getParent().getParent()==null/* current is level01 */) {
                     try {
-                        uuidBuf.insert(0, pinyinTool.toPinYin(next.getLevel(), "", true) + " ");
+                        uuidBuf.insert(0, pinyinTool.toPinYin(next.getLevel().replace("、", ""), "", true) + " ");
                     } catch (BadHanyuPinyinOutputFormatCombination bhpofc) {
                         new RuntimeException(bhpofc.getMessage(), bhpofc);
                     }

@@ -12,6 +12,7 @@ repositories {
 }
 
 dependencies {
+    compile group: 'com.google.guava', name: 'guava', version: '26.0-jre'
     compile group: 'com.belerweb', name: 'pinyin4j', version: '2.5.0'
     compile 'com.h2database:h2:1.4.196'
     compile 'com.h2database:h2:1.4.196'

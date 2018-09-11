@@ -72,23 +72,30 @@ public class TreeTool {
                 classifRoot.addChild(level1);
             }
 
-            levelPath += " | "+levels[1];
-            ClassiNode level2 = getNode(classifRoot, levelPath);
-            if (level2==null) {
-                level2 = new ClassiNode().setLevel(levels[1]).setParent(level1);
-                level1.addChild(level2);
+            ClassiNode level2 = null;
+            if (level1!=null && levels.length>=2) {
+                levelPath += " | " + levels[1];
+                level2 = getNode(classifRoot, levelPath);
+                if (level2 == null) {
+                    level2 = new ClassiNode().setLevel(levels[1]).setParent(level1);
+                    level1.addChild(level2);
+                }
             }
 
-            levelPath += " | "+levels[2];
-            ClassiNode level3 = getNode(classifRoot, levelPath);
-            if (level3==null) {
-                level3 = new ClassiNode().setLevel(levels[2]).setParent(level2);
-                level2.addChild(level3);
+            ClassiNode level3 = null;
+            if (level2!=null && levels.length>=3) {
+                levelPath += " | " + levels[2];
+                level3 = getNode(classifRoot, levelPath);
+                if (level3 == null) {
+                    level3 = new ClassiNode().setLevel(levels[2]).setParent(level2);
+                    level2.addChild(level3);
+                }
             }
 
-            if (levels.length==4) {
+            ClassiNode level4 = null;
+            if (level3!=null && levels.length>=4) {
                 levelPath += " | " + levels[3];
-                ClassiNode level4 = getNode(classifRoot, levelPath);
+                level4 = getNode(classifRoot, levelPath);
                 if (level4 == null) {
                     level4 = new ClassiNode().setLevel(levels[3]).setParent(level3);
                     level3.addChild(level4);

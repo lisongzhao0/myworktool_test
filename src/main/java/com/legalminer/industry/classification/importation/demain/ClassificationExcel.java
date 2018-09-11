@@ -49,7 +49,9 @@ public class ClassificationExcel {
     }
 
     public String level1234() {
-        return level01 + " | " + level02 + " | " + level03 +
+        return level01 +
+                (null!=level02 ? " | " + level02 : "") +
+                (null!=level03 ? " | " + level03 : "") +
                 (null!=level04 ? " | " + level04 : "");
     }
 
