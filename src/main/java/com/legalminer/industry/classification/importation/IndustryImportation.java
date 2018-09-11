@@ -77,24 +77,94 @@ public class IndustryImportation {
             existed.add(clazz.level1234());
         }
 
-        classifRoot = ClassiNode.createTree(classifRoot, new ArrayList<>(existed));
+        // 创建分类树
         TreeTool treeTool = TreeTool.newOne();
-        treeTool.getProcessLeaf(classifRoot, new TreeHandler());
+        classifRoot = treeTool.createTree(classifRoot, new ArrayList<>(existed));
+        treeTool.processLeaf(classifRoot, new TreeHandler()/* 为分类树设置 uuid */);
 
-        return new String[]{  };
+        // 构建分类 SQL
+        List<ClassiNode> leaves = treeTool.getAllLeaf(classifRoot);
+        final StringBuilder classificationSQL = new StringBuilder();
+        treeTool.processNode(classifRoot, new TreeTool.TreeHanlder() {
+            @Override public ClassiNode createNode(ClassiNode rootNode, String[] treePath) { return null; }
+            @Override public void processLeaf(ClassiNode leaf) { }
+            @Override public void processNode(ClassiNode node) {
+                if (node.getParent()==null) {return;}
+                if (classificationSQL.length()==0) {
+                    classificationSQL.append("insert into er_industry_classification(\"id\", \"create_date\", \"level\", \"p_id\", \"product\", \"type\") VALUES \n");
+                }
+                classificationSQL.append("('").append(node.getUuid()).append("'")
+                        .append(",").append("CURRENT_TIMESTAMP")
+                        .append(",").append(node.getDepth())
+                        .append(",'").append(node.parentIsRoot() ? 0 : node.getParent().getUuid()).append("'")
+                        .append(",'").append(node.getLevel()).append("'")
+                        .append(",'").append(ClassiType).append("'")
+                        .append("),\n");
+            }
+        });
+        classificationSQL.delete(classificationSQL.length()-2, classificationSQL.length()).append(";");
+
+        // 分类下的公司
+        Map<String, List<ClassificationExcel>> level234_classiExcel = new HashMap<>();
+        for (ClassificationExcel clazz : validClassif) {
+            List<ClassificationExcel> classiExcelSet = level234_classiExcel.get(clazz.level1234());
+            if (null==classiExcelSet) {
+                classiExcelSet = new ArrayList<>();
+                level234_classiExcel.put(clazz.level1234(), classiExcelSet);
+            }
+            classiExcelSet.add(clazz);
+        }
+
+        // 构建 company 和 company_classification 的 SQL
+        final StringBuilder classiCompanySQL = new StringBuilder();
+        final StringBuilder classiCompanyRelSQL = new StringBuilder();
+        for (ClassiNode leaf : leaves) {
+            List<ClassificationExcel> classiCompanies = level234_classiExcel.get(leaf.getLevel1234());
+            for (ClassificationExcel classiComp : classiCompanies) {
+                classiComp.setUuid(UUID.randomUUID().toString().replace("-", ""));
+
+                if (classiCompanySQL.length()==0) {
+                    classiCompanySQL.append("insert into er_classification_company(\"id\", \"create_date\", \"data_id\", \"full_name\", \"income\", \"income_percent\", \"stock_code\", \"stock_name\") VALUES \n");
+                }
+                classiCompanySQL.append("('").append(classiComp.getUuid()).append("'")
+                        .append(",").append("CURRENT_TIMESTAMP")
+                        .append(",'").append(classiComp.getFullName()).append("'")
+                        .append(",'").append(classiComp.getFullName()).append("'")
+                        .append(",").append(0).append("")
+                        .append(",").append(0).append("")
+                        .append(",'").append(classiComp.getCode()).append("'")
+                        .append(",'").append(classiComp.getShortName()).append("'")
+                        .append("),\n");
+
+                if (classiCompanyRelSQL.length()==0) {
+                    classiCompanyRelSQL.append("insert into er_classification_company(\"industry_id\", \"company_id\") VALUES \n");
+                }
+                classiCompanyRelSQL.append("('").append(leaf.getUuid()).append("'")
+                        .append("('").append(classiComp.getUuid()).append("'")
+                        .append("),\n");
+            }
+        }
+        classiCompanySQL.delete(classiCompanySQL.length()-2, classiCompanySQL.length()).append(";");
+        classiCompanyRelSQL.delete(classiCompanyRelSQL.length()-2, classiCompanyRelSQL.length()).append(";");
+
+        System.out.println(classificationSQL.toString());
+        System.out.println(classiCompanySQL.toString());
+        System.out.println(classiCompanyRelSQL.toString());
+        return new String[]{classificationSQL.toString(), classiCompanySQL.toString(), classiCompanyRelSQL.toString() };
     }
 
     public List<ClassificationExcel> getValidClassif(List<ClassificationExcel> allClazz, List<Company> allComp) {
-        Set<String> allCompanyFullName = new HashSet<>();
+        HashMap<String, Company> allCompanyFullName = new HashMap<>();
         for (Company comp : allComp) {
-            allCompanyFullName.add(comp.getFullName());
+            allCompanyFullName.put(comp.getFullName(), comp);
         }
 
         List<ClassificationExcel> existClassifi = new ArrayList<>();
         for (ClassificationExcel clazz : allClazz) {
-            if (!allCompanyFullName.contains(clazz.getFullName())) {
+            if (!allCompanyFullName.containsKey(clazz.getFullName())) {
                 continue;
             }
+            clazz.setCompany(allCompanyFullName.get(clazz.getFullName()));
 
             existClassifi.add(clazz);
             clazz.setUuid(UUID.randomUUID().toString().replace("-", ""));
@@ -127,79 +197,14 @@ public class IndustryImportation {
         return existClassifi;
     }
 
-    public ClassiNode setUuidForClassiNode(ClassiNode node) throws BadHanyuPinyinOutputFormatCombination {
-        List<ClassiNode> allLeaf = ClassiNode.getAllLeaf(node);
-        System.out.println(allLeaf.size());
-        PinyinTool pinyinTool = PinyinTool.newOne();
-
-        // 设置 level 01 的 uuid
-        Enumeration<ClassiNode> allLevel01 = node.children();
-        while (allLevel01.hasMoreElements()) {
-            ClassiNode level01 = allLevel01.nextElement();
-            String level01Uuid = pinyinTool.toPinYin(level01.getLevel(), "", true);
-            if (Level1Start.contains(level01Uuid)) {
-                throw new RuntimeException("Level01 uuid is exist, uuid="+level01Uuid);
-            }
-            Level1Start.add(level01Uuid);
-            level01.setUuid(level01Uuid);
-        }
-
-        // 设置 level 04 03 02 的 uuid
-        for (ClassiNode leaf : allLeaf) {
-            StringBuilder uuidBuf = new StringBuilder();
-            ClassiNode next = leaf;
-            while(null!=next.getParent()) {
-                if (null!=next.getUuid()) {
-                    uuidBuf.insert(0, next.getUuid() + " ");
-                    break;
-                }
-                else
-                    uuidBuf.insert(0, String.format("%02d ", next.getParent().getIndex(next) + 1));
-                next = next.getParent();
-            }
-            String uuid = uuidBuf.toString().replace(" ", "");
-            next = leaf;
-            while(null!=next.getParent()) {
-                if (null!=next.getUuid()) {
-                    break;
-                }
-                else {
-                    next.setUuid(uuid);
-                    uuid = uuid.substring(0, uuid.length()-2);
-                }
-                next = next.getParent();
-            }
-            System.out.println(leaf.getUuid() + "\t" + leaf.getLevel1234());
-        }
-        return node;
-    }
-
-    public String constructClassifSQL(List<ClassificationExcel> allClazz) {
-        StringBuilder sqlComp = new StringBuilder();
-        for (ClassificationExcel clazz : allClazz) {
-
-            sqlComp.append("insert into ");
-        }
-        return null;
-    }
-
-//    public String constructCompSQL(List<ClassificationExcel> allClazz, List<Company> allComp) {
-//        //jdbc:postgresql://192.168.1.129:5432/legalminer
-//        //usr:  postgres
-//        //pwd:  legallohas
-//        StringBuilder sqlComp = new StringBuilder();
-//        for (Company comp : allComp) {
-//            sqlComp.append("in")
-//        }
-//    }
-
-//    public String constructClassifCompRelSQL(List<ClassificationExcel> allClazz, List<Company> allComp) {
-//
-//    }
-
     public static class TreeHandler implements TreeTool.TreeHanlder {
 
         private static final PinyinTool pinyinTool = PinyinTool.newOne();
+
+        @Override
+        public void processNode(ClassiNode node) {
+            return;
+        }
 
         @Override
         public ClassiNode createNode(ClassiNode rootNode, String[] treePath) {

@@ -10,6 +10,7 @@ public class ClassificationExcel {
     private String level03;
     private String level04;
     private String uuid;
+    private Company company;
 
     public String getMarket() {
         return market;
@@ -50,6 +51,10 @@ public class ClassificationExcel {
     public String level1234() {
         return level01 + " | " + level02 + " | " + level03 +
                 (null!=level04 ? " | " + level04 : "");
+    }
+
+    public Company getCompany() {
+        return company;
     }
 
     public String toString() {
@@ -98,6 +103,11 @@ public class ClassificationExcel {
 
     public ClassificationExcel setUuid(String uuid) {
         this.uuid = uuid;
+        return this;
+    }
+
+    public ClassificationExcel setCompany(Company company) {
+        this.company = company;
         return this;
     }
 }

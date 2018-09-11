@@ -23,12 +23,26 @@ public class ClassiNode implements TreeNode {
         return uuid;
     }
 
+    public int getDepth() {
+        int depth = 0;
+        ClassiNode current = getParent();
+        while (null!=current) {
+            depth ++;
+            current = current.getParent();
+        }
+        return depth;
+    }
+
     public String getLevel() {
         return level;
     }
 
     public Object getUserObject() {
         return userObject;
+    }
+
+    public boolean parentIsRoot() {
+        return getParent()!=null && getParent().getParent()==null;
     }
 
     public ClassiNode setParent(ClassiNode parent) {
@@ -83,110 +97,6 @@ public class ClassiNode implements TreeNode {
         }
 
         return name;
-    }
-
-    //=============================================
-    public static ClassiNode getNode(ClassiNode root, String level1234) {
-        if (null==root || root.getChildCount()==0) {
-            return null;
-        }
-        String[] levels = level1234.split(" \\| ");
-        return getNode(root, levels, 0);
-    }
-
-    public static ClassiNode getNode(ClassiNode root, String[] levels, int levelIndex) {
-        if (null==root) {
-            return null;
-        }
-        if (levelIndex>=levels.length) {
-            return null;
-        }
-
-        String level = levels[levelIndex];
-        Enumeration<ClassiNode> childs = root.children();
-        while (childs.hasMoreElements()) {
-            ClassiNode child = childs.nextElement();
-            if (child.getLevel().equals(level)) {
-                if (levelIndex+1 < levels.length) {
-                    return getNode(child, levels, levelIndex + 1);
-                } else {
-                    return child;
-                }
-            }
-        }
-        return null;
-    }
-
-    public static List<ClassiNode> getAllLeaf(ClassiNode root) {
-        if (root==null) {
-            return new ArrayList<>();
-        }
-        List<ClassiNode> allLeaf = new ArrayList<>();
-
-        if (root.getChildCount()==0) {
-            allLeaf.add(root);
-            return allLeaf;
-        }
-
-        Enumeration<ClassiNode> childs = root.children();
-        while (childs.hasMoreElements()) {
-            ClassiNode child = childs.nextElement();
-            if (child.getChildCount()==0) {
-                allLeaf.add(child);
-            }
-            else {
-                List<ClassiNode> subLeaf = getAllLeaf(child);
-                allLeaf.addAll(subLeaf);
-            }
-        }
-
-        return allLeaf;
-    }
-
-    public static ClassiNode createTree(ClassiNode classifRoot, List<String> treeString) {
-        if (null==classifRoot) {
-            classifRoot = new ClassiNode();
-        }
-        Set<String> existed = new HashSet<>();
-        for (String level1234 : treeString) {
-            if (existed.contains(level1234)) {
-                continue;
-            }
-            existed.add(level1234);
-            String[] levels = level1234.split(" \\| ");
-
-            String levelPath = levels[0];
-            ClassiNode level1 = ClassiNode.getNode(classifRoot, levelPath);
-            if (level1==null) {
-                level1 = new ClassiNode().setLevel(levels[0]).setParent(classifRoot);
-                classifRoot.addChild(level1);
-            }
-
-            levelPath += " | "+levels[1];
-            ClassiNode level2 = ClassiNode.getNode(classifRoot, levelPath);
-            if (level2==null) {
-                level2 = new ClassiNode().setLevel(levels[1]).setParent(level1);
-                level1.addChild(level2);
-            }
-
-            levelPath += " | "+levels[2];
-            ClassiNode level3 = ClassiNode.getNode(classifRoot, levelPath);
-            if (level3==null) {
-                level3 = new ClassiNode().setLevel(levels[2]).setParent(level2);
-                level2.addChild(level3);
-            }
-
-            if (levels.length==4) {
-                levelPath += " | " + levels[3];
-                ClassiNode level4 = ClassiNode.getNode(classifRoot, levelPath);
-                if (level4 == null) {
-                    level4 = new ClassiNode().setLevel(levels[3]).setParent(level3);
-                    level3.addChild(level4);
-                }
-            }
-        }
-
-        return classifRoot;
     }
 
     //=============================================
